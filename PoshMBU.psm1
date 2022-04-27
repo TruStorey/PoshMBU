@@ -267,7 +267,7 @@ function Get-RackerTools {
 
 function Get-PWSafe {
     param (
-        [Parameter(Position = 0)]$Credential,
+        [Parameter(Position = 0)]$Credential
     )
 
     #Get Token
@@ -294,3 +294,5 @@ Export-ModuleMember -Function Get-mbuDevice, Connect-mbuDevice, Get-RackerTools,
 # Get-NetworkSwitchPort $mbuDevices #Will prompt for password on first run
 
 # Get-VmDatastore $mbuDevices
+
+# Get-Backups (interact with MBU API to get info on DDB Backups etc)
