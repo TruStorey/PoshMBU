@@ -11,6 +11,7 @@
  .Example
    # Shows a list of all devices with CS0404 in the Hostname and their Core Status.
    Get-mbuDevice CS0404
+   g CS0404
 
  .Example
    # Display a date range.
@@ -21,7 +22,6 @@
 # Requried Modules for this to work!
 #Requires -Modules ModuleManager, PoshCore, RaxUtilities
 
-# Search Device by Hostname in Account 27928
 function Get-mbuDevice {
     param (
         [Parameter(Position = 0, Mandatory)]$Device,
@@ -35,7 +35,8 @@ function Get-mbuDevice {
         [Parameter()][int]$SearchAccount = 27928,
         [Parameter()][switch]$TypeRackPass,
         [Parameter()][int]$TypeTimer = 5,
-        #[Parameter(ParameterSetName = 'ByStatus')][ValidateSet('DFW3' ,'ORD1' ,'IAD3' ,'IAD4' ,'LON3' ,'LON5' ,'LON6' ,'LON7' ,'FRA1' ,'FRA30' ,'HKG2' ,'HKG5' ,'SYD2' ,'SYD4' ,'SIN2' ,'SIN30' ,'SIN80' ,'NYC2' ,'SJC2' ,'MCI1' ,'SHA2',IgnoreCase=$true)][string]$DC, 
+        #[Parameter(ParameterSetName = 'ByStatus')]
+        [ValidateSet('DFW3' ,'ORD1' ,'IAD3' ,'IAD4' ,'LON3' ,'LON5' ,'LON6' ,'LON7' ,'FRA1' ,'FRA30' ,'HKG2' ,'HKG5' ,'SYD2' ,'SYD4' ,'SIN2' ,'SIN30' ,'SIN80' ,'NYC2' ,'SJC2' ,'MCI1' ,'SHA2',IgnoreCase=$true)][string]$DC, 
         [Parameter(ParameterSetName = 'ByStatus')][switch]$Inactive
     )
 
@@ -284,12 +285,23 @@ function Get-PWSafe {
     else {
         $PWSafeCreds = (Invoke-RestMethod -Uri "https://passwordsafe.corp.rackspace.com/projects/$PWSafePrjID/credentials?per_page=1000" -Headers $headers).credential | Where-Object {$_.description -match $CredName} | Select-Object @{Name='Description';Expression='description'}, @{Name='Username';Expression='username'}, @{Name='Password';Expression='password'}, @{Name='Category';Expression='category'}, @{Name='Last Updated';Expression='updated_at'}
     }
-}
+    }
     end {
     Write-Output $PWSafeCreds
     }
     #$LibPass = ConvertTo-SecureString -AsPlainText -String ($MBU_creds | Where-Object { $_.category -match 'Library' -and $_.description -like '*' + $search + '*'  -and $_.username -match 'root'}).password
 }
+
+<# 
+MBU API - Same headers as Password Safe API
+$commcells = Invoke-RestMethod -Uri "https://api.backupcenter.sb.rackspace.com/v2/commcells/?per_page=1000" -Headers $headers 
+$ddbs = Invoke-RestMethod -Uri "https://api.backupcenter.sb.rackspace.com/v2/ddbs/?per_page=1000" -Headers $headers
+$libs = Invoke-RestMethod -Uri "https://api.backupcenter.sb.rackspace.com/v2/libraries/?per_page=1000" -Headers $headers
+
+# CVwatch Wannabe
+$cvwatch.items | Select-Object -Property commcellName, libraryAlias, runningJobs, waitingJobs, pendingJobs, queuedJobs, suspendedJobs, restoreJobs | Sort-Object -Property commcellName | Where-Object {$_.commcellName -ne 'Dummy'}
+
+#>
 
 # Alias
 New-Alias -Name g -Value Get-mbuDevice
@@ -297,24 +309,13 @@ New-Alias -Name c -Value Connect-mbuDevice
 New-Alias -Name pw -Value Get-PWSafe
 
 # Export
-Export-ModuleMember -Function Get-mbuDevice, Connect-mbuDevice, Get-RackerTools, Get-PWSafe -Alias *
+Export-ModuleMember -Function * -Alias *
 
 
-
+# Ideas to add
 # Find switchports
-
-# SSH to Linux Devices from Powershell
-
-# Launch RoyalTS to connect to Windows devices
-
-# Search Password Safe Password
-
 # List Snapshots, and maybe create or delete them.
-
 # Get-Fireall $mbuDevices
-
 # Get-NetworkSwitchPort $mbuDevices #Will prompt for password on first run
-
 # Get-VmDatastore $mbuDevices
-
 # Get-Backups (interact with MBU API to get info on DDB Backups etc)
