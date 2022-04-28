@@ -234,30 +234,14 @@ function Connect-mbuDevice {
 function Get-RackerTools {
     param (
         [Parameter(Position = 0)]$Racker,
+        [Parameter()][switch]$lonfiles,
         [Parameter()][switch]$LocalAdminPass
     )
 
-    # Compare CSVs for SP Copy comparison
-    <#$CSV1 = Import-CSV -Path
-    $CSV2 = Import-CSV -Path
-    foreach ($Item in $CSV1.ColA) 
-    { if ($Item -in $CSV2.ColA) 
-        { 
-
-        } 
-        else 
-        { Write-Output "Job $Item from CSV1 doesn't exist in CSV2" } 
-    }
-    #>
-    # Password Safe API calls
-
-    <#
-    $preToken = Get-RackerToken
-    $token = ($preToken).XAuthToken.'x-auth-token'
-    curl -H "Content-Type: application/json" -H "Accept: application/json" -H "X-Auth-Token: $token" https://passwordsafe.corp.rackspace.com/projects/
-    #>
-    
-    if ($LocalAdminPass) {
+    if ($lonfiles){
+    New-PSDrive -Name 'lonfiles' -PSProvider FileSystem -Root '\\lonfiles.storage.rackspace.com\mbu_stuff' -Credential 'storage\daniel.storey'
+    }  
+    elseif ($LocalAdminPass) {
         Get-RackerAdminPassword
     }
     else {
@@ -267,17 +251,55 @@ function Get-RackerTools {
 
 function Get-PWSafe {
     param (
-        [Parameter(Position = 0)]$Credential
+        [Parameter(Position = 0)]$CredName,
+        [Parameter()][switch]$Maglibs,
+        [Parameter()][switch]$LibraryRoot,
+        [Parameter()][switch]$LibraryAdmin,
+        [Parameter(ParameterSetName = 'ByProject')][ValidateSet('MBU Engineering', 'MBU Engineering - Cohesity',IgnoreCase=$true)][string]$Project = 'MBU Engineering'        
     )
-
-    #Get Token
+    begin {
     $token = (Get-RackerToken).XAuthToken.'x-auth-token'
-    #PWSafe_API1 = curl -H "Content-Type: application/json" -H "Accept: application/json" -H "X-Auth-Token: $token" https://passwordsafe.corp.rackspace.com/projects/
-    #Get all Passwords in a Project = (curl -H "Content-Type: application/json" -H "Accept: application/json" -H "X-Auth-Token: $token" https://passwordsafe.corp.rackspace.com/projects/1315/credentials?per_page=1000 | ConvertFrom-JSON).credential
+    $headers = @{'Content-Type' = 'application/json'; 'Accept' = 'application/json'; 'X-Auth-Token' = $token}
+    
+    # Get Project 'ID' from 'Name'
+    $PWSafeProjects = Invoke-RestMethod -Uri "https://passwordsafe.corp.rackspace.com/projects" -Headers $headers
+    }
+    
+    process {
+    $PWSafePrjID = ($PWsafeProjects.Project | Where-Object {$_.name -eq "$Project"}).id
+
+    # Get all Passwords in a Project
+    $PWSafeCreds = (Invoke-RestMethod -Uri "https://passwordsafe.corp.rackspace.com/projects/$PWSafePrjID/credentials?per_page=1000" -Headers $headers).credential | Where-Object {$_.description -match $CredName}
+    
+    if ($Maglibs) {
+        $PWSafeCreds = (Invoke-RestMethod -Uri "https://passwordsafe.corp.rackspace.com/projects/$PWSafePrjID/credentials?per_page=1000" -Headers $headers).credential | Where-Object {$_.description -match $CredName -and $_.description -match 'maglib' -and $_.category -eq 'CommVault'} | Select-Object @{Name='Description';Expression='description'}, @{Name='Username';Expression='username'}, @{Name='Password';Expression='password'}, @{Name='Category';Expression='category'}, @{Name='Last Updated';Expression='updated_at'}
+
+    }
+    elseif ($LibraryRoot) {
+        $PWSafeCreds = (Invoke-RestMethod -Uri "https://passwordsafe.corp.rackspace.com/projects/$PWSafePrjID/credentials?per_page=1000" -Headers $headers).credential | Where-Object {$_.description -match $CredName -and $_.description -match 'root' -and $_.category -eq 'Library'} | Select-Object @{Name='Description';Expression='description'}, @{Name='Username';Expression='username'}, @{Name='Password';Expression='password'}, @{Name='Category';Expression='category'}, @{Name='Last Updated';Expression='updated_at'}
+    }
+    elseif ($LibraryAdmin) {
+        $PWSafeCreds = (Invoke-RestMethod -Uri "https://passwordsafe.corp.rackspace.com/projects/$PWSafePrjID/credentials?per_page=1000" -Headers $headers).credential | Where-Object {$_.description -match $CredName -and $_.description -match 'admin' -and $_.category -eq 'Library'} | Select-Object @{Name='Description';Expression='description'}, @{Name='Username';Expression='username'}, @{Name='Password';Expression='password'}, @{Name='Category';Expression='category'}, @{Name='Last Updated';Expression='updated_at'}
+    }
+    else {
+        $PWSafeCreds = (Invoke-RestMethod -Uri "https://passwordsafe.corp.rackspace.com/projects/$PWSafePrjID/credentials?per_page=1000" -Headers $headers).credential | Where-Object {$_.description -match $CredName} | Select-Object @{Name='Description';Expression='description'}, @{Name='Username';Expression='username'}, @{Name='Password';Expression='password'}, @{Name='Category';Expression='category'}, @{Name='Last Updated';Expression='updated_at'}
+    }
+}
+    end {
+    Write-Output $PWSafeCreds
+    }
     #$LibPass = ConvertTo-SecureString -AsPlainText -String ($MBU_creds | Where-Object { $_.category -match 'Library' -and $_.description -like '*' + $search + '*'  -and $_.username -match 'root'}).password
 }
 
-Export-ModuleMember -Function Get-mbuDevice, Connect-mbuDevice, Get-RackerTools, Get-PWSafe
+# Alias
+New-Alias -Name g -Value Get-mbuDevice
+New-Alias -Name c -Value Connect-mbuDevice
+New-Alias -Name pw -Value Get-PWSafe
+
+# Export
+Export-ModuleMember -Function Get-mbuDevice, Connect-mbuDevice, Get-RackerTools, Get-PWSafe -Alias *
+
+
 
 # Find switchports
 
