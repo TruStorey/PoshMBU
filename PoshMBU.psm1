@@ -19,7 +19,6 @@
 
 #>
 
-# Requried Modules for this to work!
 #Requires -Modules ModuleManager, PoshCore, RaxUtilities
 
 function Get-mbuDevice {
