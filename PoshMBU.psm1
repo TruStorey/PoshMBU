@@ -39,124 +39,123 @@ function Get-mbuDevice {
         [Parameter(ParameterSetName = 'ByStatus')][switch]$Inactive
     )
 
-    $CoreError = $false
-
-    # Test if Hostname or Device Number was passed in parameters.
-    if ($Device.GetType().Name -eq 'Int32') {
-        $mbuDevices = $Device
-    }
-    elseif ($Device.GetType().Name -eq 'String') {
+    begin {
+        $CoreError = $false    
         
-            #$mbuDevices = (Find-CoreComputerByHostname -Account $SearchAccount -Hostname $Device | Select-Object number).number
-        
-        # Need to work out logic to try upper case and lower case names 
-
-        $mbuDevices = (Find-CoreComputerByHostname -Account $SearchAccount -Hostname $Device | Select-Object number).number
-        if ($mbuDevices) {
-            $mbuDevices = $mbuDevices
+        # Test if Hostname or Device Number was passed in parameters.
+        if ($Device.GetType().Name -eq 'Int32') {
+            $mbuDevices = $Device
         }
-        else {
-            $DeviceToUpper = $Device.ToUpper()
-            $mbuDevices = (Find-CoreComputerByHostname -Account $SearchAccount -Hostname $DeviceToUpper | Select-Object number).number
+        elseif ($Device.GetType().Name -eq 'String') {
+            $mbuDevices = (Find-CoreComputerByHostname -Account $SearchAccount -Hostname $Device | Select-Object number).number
             if ($mbuDevices) {
+                $mbuDevices = $mbuDevices
             }
+            # Logic to try upper case and lower case names 
             else {
-                $DeviceToLower = $Device.ToLower()
-                $mbuDevices = (Find-CoreComputerByHostname -Account $SearchAccount -Hostname $DeviceToLower | Select-Object number).number
+                $DeviceToUpper = $Device.ToUpper()
+                $mbuDevices = (Find-CoreComputerByHostname -Account $SearchAccount -Hostname $DeviceToUpper | Select-Object number).number
+                if ($mbuDevices) {
+                }
+                else {
+                    $DeviceToLower = $Device.ToLower()
+                    $mbuDevices = (Find-CoreComputerByHostname -Account $SearchAccount -Hostname $DeviceToLower | Select-Object number).number
+                }
             }
         }
     }
- 
-    if ($Inactive) { 
-        try {
-            $Results = Find-CoreComputer -Computers @($mbuDevices) | Select-Object @{Name='Device';Expression='number'},@{Name='Hostname';Expression='name'},@{Name='DC';Expression='datacenter_symbol'},@{Name='Status';Expression='status_name'}
-        }
-        catch {
-            $CoreError = $true         
-        }
-    } 
-    elseif ($DRAC) {
-        try {
-            $Results = Find-CoreComputer -Computers @($mbuDevices) -Attributes Drac | Select-Object @{Name='Device';Expression='number'},@{Name='Hostname';Expression='name'},@{Name='DC';Expression='datacenter_symbol'},@{Name='DRAC IP';Expression='drac_ips'},@{Name='DRAC User';Expression='drac_usernames'},@{Name='DRAC Password';Expression='drac_passwords'}}
-        catch {
-            $CoreError = $true         
-        }
-    }
-    elseif ($ShowCreds) {
-        try {
-            $Results = Find-CoreComputer -Computers @($mbuDevices) -Attributes Password | Select-Object @{Name='Device';Expression='number'},@{Name='Hostname';Expression='name'},@{Name='Rack Pass';Expression='rack_password'},@{Name='Admin Pass';Expression='admin_password'}}
-        catch {
-            $CoreError = $true         
-        }
-    }
-    elseif ($IPs) {
-        try {
-        #$Results = Find-CoreComputer -Computers @($mbuDevices) -Attributes Network
-            $Results = Get-NetworkInformation -Device $mbuDevices | Select-Object Device,@{Name='Hostname';Expression='DeviceName'},@{Name='Public IP';Expression='PublicIp'},@{Name='ServiceNet IP';Expression='ServiceNetIp'},AggExZone
-        }
-        catch {
-            $CoreError = $true         
-        }
-    }
-    elseif ($Virt) {
-        try {
-            $Results = Get-VmInformation -Device $mbuDevices | Select-Object Device,@{Name='Hostname';Expression='DeviceName'},DC,Networks,PowerState,Hypervisor,HypervisorClusterName,VCenter
-        }
-        catch {
-            $CoreError = $true         
-        }
-    }
-    elseif ($vCenter) {
-        Open-VCenter -Device $mbuDevices
-    }
-    elseif ($vPortal) {
-        $hypDevice = (Get-VmInformation -Device $mbuDevices | Select-Object Hypervisor).Hypervisor.Split("-")[0]
-        $PortalURL = "https://racker.my.rackspace.com/portal/rs/$SearchAccount/virtualization/index#!/detail/$mbuDevices/$hypDevice"
-        Start-Process $PortalURL
-    }
-    elseif ($OpenCore) {
-        try { 
-            Show-CoreComputer -Computer $mbuDevices
-        }
-        catch {
-            $CoreError = $true         
-        }
-    }
-    elseif ($TypeRackPass) {
-        try {
-            $RackPassword = (Find-CoreComputer -Computers @($mbuDevices) -Attributes Password).rack_password
-        }
-        catch {
-            $CoreError = $true         
-        }
-        if ($RackPassword) {
-            $Typer = New-Object -ComObject wscript.shell;
-            Start-Sleep $TypeTimer
-            $Typer.SendKeys($RackPassword)
-        }
-    }
-    else { 
 
-        #$Results = Find-CoreComputer -Computers @($mbuDevices) | Where-Object {$_.status_name -match 'Online/Complete'} | Select-Object @{Name='Device';Expression='number'},@{Name='Hostname';Expression='name'},@{Name='DC';Expression='datacenter_symbol'},@{Name='Status';Expression='status_name'}
-
-        # This is screwing all the other if statements
-        try {
-            $Results = Find-CoreComputer -Computers @($mbuDevices) | Where-Object {$_.status_name -match 'Online/Complete'} | Select-Object @{Name='Device';Expression='number'},@{Name='Hostname';Expression='name'},@{Name='DC';Expression='datacenter_symbol'},@{Name='Status';Expression='status_name'}
+    process {
+        if ($Inactive) { 
+            try {
+                $Results = Find-CoreComputer -Computers @($mbuDevices) | Select-Object @{Name='Device';Expression='number'},@{Name='Hostname';Expression='name'},@{Name='DC';Expression='datacenter_symbol'},@{Name='Status';Expression='status_name'}
+            }
+            catch {
+                $CoreError = $true         
+            }
+        } 
+        elseif ($DRAC) {
+            try {
+                $Results = Find-CoreComputer -Computers @($mbuDevices) -Attributes Drac | Select-Object @{Name='Device';Expression='number'},@{Name='Hostname';Expression='name'},@{Name='DC';Expression='datacenter_symbol'},@{Name='DRAC IP';Expression='drac_ips'},@{Name='DRAC User';Expression='drac_usernames'},@{Name='DRAC Password';Expression='drac_passwords'}}
+            catch {
+                $CoreError = $true         
+            }
         }
-        catch {
-            $CoreError = $true         
+        elseif ($ShowCreds) {
+            try {
+                $Results = Find-CoreComputer -Computers @($mbuDevices) -Attributes Password | Select-Object @{Name='Device';Expression='number'},@{Name='Hostname';Expression='name'},@{Name='Rack Pass';Expression='rack_password'},@{Name='Admin Pass';Expression='admin_password'}}
+            catch {
+                $CoreError = $true         
+            }
         }
-   
-    }
-    if ($CoreError) {
-        $Results = (Write-Warning "Could not find a Core device with name '$DeviceToUpper' or '$DeviceToLower'. `n`rPROTIP: You either fat fingered it, or the device name in Core is written in CamelCase.`n") 
-    }
-    else { 
-        $Results = $Results
-    }
+        elseif ($IPs) {
+            try {
+            #$Results = Find-CoreComputer -Computers @($mbuDevices) -Attributes Network
+                $Results = Get-NetworkInformation -Device $mbuDevices | Select-Object Device,@{Name='Hostname';Expression='DeviceName'},@{Name='Public IP';Expression='PublicIp'},@{Name='ServiceNet IP';Expression='ServiceNetIp'},AggExZone
+            }
+            catch {
+                $CoreError = $true         
+            }
+        }
+        elseif ($Virt) {
+            try {
+                $Results = Get-VmInformation -Device $mbuDevices | Select-Object Device,@{Name='Hostname';Expression='DeviceName'},DC,Networks,PowerState,Hypervisor,HypervisorClusterName,VCenter
+            }
+            catch {
+                $CoreError = $true         
+            }
+        }
+        elseif ($vCenter) {
+            Open-VCenter -Device $mbuDevices
+        }
+        elseif ($vPortal) {
+            $hypDevice = (Get-VmInformation -Device $mbuDevices | Select-Object Hypervisor).Hypervisor.Split("-")[0]
+            $PortalURL = "https://racker.my.rackspace.com/portal/rs/$SearchAccount/virtualization/index#!/detail/$mbuDevices/$hypDevice"
+            Start-Process $PortalURL
+        }
+        elseif ($OpenCore) {
+            try { 
+                Show-CoreComputer -Computer $mbuDevices
+            }
+            catch {
+                $CoreError = $true         
+            }
+        }
+        elseif ($TypeRackPass) {
+            try {
+                $RackPassword = (Find-CoreComputer -Computers @($mbuDevices) -Attributes Password).rack_password
+            }
+            catch {
+                $CoreError = $true         
+            }
+            if ($RackPassword) {
+                $Typer = New-Object -ComObject wscript.shell;
+                Start-Sleep $TypeTimer
+                $Typer.SendKeys($RackPassword)
+            }
+        }
+        else { 
 
-    Write-Output $Results
-    
+            #$Results = Find-CoreComputer -Computers @($mbuDevices) | Where-Object {$_.status_name -match 'Online/Complete'} | Select-Object @{Name='Device';Expression='number'},@{Name='Hostname';Expression='name'},@{Name='DC';Expression='datacenter_symbol'},@{Name='Status';Expression='status_name'}
+            # This is screwing all the other if statements
+            try {
+                $Results = Find-CoreComputer -Computers @($mbuDevices) | Where-Object {$_.status_name -match 'Online/Complete'} | Select-Object @{Name='Device';Expression='number'},@{Name='Hostname';Expression='name'},@{Name='DC';Expression='datacenter_symbol'},@{Name='Status';Expression='status_name'}
+            }
+            catch {
+                $CoreError = $true         
+            }
+       }
+       
+        if ($CoreError) {
+            $Results = (Write-Warning "Could not find a Core device with name '$DeviceToUpper' or '$DeviceToLower'. `n`rPROTIP: You either fat fingered it, or the device name in Core is written in CamelCase.`n") 
+        }
+        else { 
+            $Results = $Results
+        }
+    }
+    end {
+        Write-Output $Results
+    }
 }
 
 function Connect-mbuDevice {
@@ -257,36 +256,37 @@ function Get-PWSafe {
         [Parameter()][switch]$LibraryAdmin,
         [Parameter(ParameterSetName = 'ByProject')][ValidateSet('MBU Engineering', 'MBU Engineering - Cohesity',IgnoreCase=$true)][string]$Project = 'MBU Engineering'        
     )
+
     begin {
-    $token = (Get-RackerToken).XAuthToken.'x-auth-token'
-    $headers = @{'Content-Type' = 'application/json'; 'Accept' = 'application/json'; 'X-Auth-Token' = $token}
-    
-    # Get Project 'ID' from 'Name'
-    $PWSafeProjects = Invoke-RestMethod -Uri "https://passwordsafe.corp.rackspace.com/projects" -Headers $headers
+        $token = (Get-RackerToken).XAuthToken.'x-auth-token'
+        $headers = @{'Content-Type' = 'application/json'; 'Accept' = 'application/json'; 'X-Auth-Token' = $token}
+        
+        # Get Project 'ID' from 'Name'
+        $PWSafeProjects = Invoke-RestMethod -Uri "https://passwordsafe.corp.rackspace.com/projects" -Headers $headers
+        $PWSafePrjID = ($PWsafeProjects.Project | Where-Object {$_.name -eq "$Project"}).id
     }
     
     process {
-    $PWSafePrjID = ($PWsafeProjects.Project | Where-Object {$_.name -eq "$Project"}).id
+        # Get all Passwords in a Project
+        $PWSafeCreds = (Invoke-RestMethod -Uri "https://passwordsafe.corp.rackspace.com/projects/$PWSafePrjID/credentials?per_page=1000" -Headers $headers).credential | Where-Object {$_.description -match $CredName}
+        
+        if ($Maglibs) {
+            $PWSafeCreds = (Invoke-RestMethod -Uri "https://passwordsafe.corp.rackspace.com/projects/$PWSafePrjID/credentials?per_page=1000" -Headers $headers).credential | Where-Object {$_.description -match $CredName -and $_.description -match 'maglib' -and $_.category -eq 'CommVault'} | Select-Object @{Name='Description';Expression='description'}, @{Name='Username';Expression='username'}, @{Name='Password';Expression='password'}, @{Name='Category';Expression='category'}, @{Name='Last Updated';Expression='updated_at'}
 
-    # Get all Passwords in a Project
-    $PWSafeCreds = (Invoke-RestMethod -Uri "https://passwordsafe.corp.rackspace.com/projects/$PWSafePrjID/credentials?per_page=1000" -Headers $headers).credential | Where-Object {$_.description -match $CredName}
-    
-    if ($Maglibs) {
-        $PWSafeCreds = (Invoke-RestMethod -Uri "https://passwordsafe.corp.rackspace.com/projects/$PWSafePrjID/credentials?per_page=1000" -Headers $headers).credential | Where-Object {$_.description -match $CredName -and $_.description -match 'maglib' -and $_.category -eq 'CommVault'} | Select-Object @{Name='Description';Expression='description'}, @{Name='Username';Expression='username'}, @{Name='Password';Expression='password'}, @{Name='Category';Expression='category'}, @{Name='Last Updated';Expression='updated_at'}
+        }
+        elseif ($LibraryRoot) {
+            $PWSafeCreds = (Invoke-RestMethod -Uri "https://passwordsafe.corp.rackspace.com/projects/$PWSafePrjID/credentials?per_page=1000" -Headers $headers).credential | Where-Object {$_.description -match $CredName -and $_.description -match 'root' -and $_.category -eq 'Library'} | Select-Object @{Name='Description';Expression='description'}, @{Name='Username';Expression='username'}, @{Name='Password';Expression='password'}, @{Name='Category';Expression='category'}, @{Name='Last Updated';Expression='updated_at'}
+        }
+        elseif ($LibraryAdmin) {
+            $PWSafeCreds = (Invoke-RestMethod -Uri "https://passwordsafe.corp.rackspace.com/projects/$PWSafePrjID/credentials?per_page=1000" -Headers $headers).credential | Where-Object {$_.description -match $CredName -and $_.description -match 'admin' -and $_.category -eq 'Library'} | Select-Object @{Name='Description';Expression='description'}, @{Name='Username';Expression='username'}, @{Name='Password';Expression='password'}, @{Name='Category';Expression='category'}, @{Name='Last Updated';Expression='updated_at'}
+        }
+        else {
+            $PWSafeCreds = (Invoke-RestMethod -Uri "https://passwordsafe.corp.rackspace.com/projects/$PWSafePrjID/credentials?per_page=1000" -Headers $headers).credential | Where-Object {$_.description -match $CredName} | Select-Object @{Name='Description';Expression='description'}, @{Name='Username';Expression='username'}, @{Name='Password';Expression='password'}, @{Name='Category';Expression='category'}, @{Name='Last Updated';Expression='updated_at'}
+        }
+    }
 
-    }
-    elseif ($LibraryRoot) {
-        $PWSafeCreds = (Invoke-RestMethod -Uri "https://passwordsafe.corp.rackspace.com/projects/$PWSafePrjID/credentials?per_page=1000" -Headers $headers).credential | Where-Object {$_.description -match $CredName -and $_.description -match 'root' -and $_.category -eq 'Library'} | Select-Object @{Name='Description';Expression='description'}, @{Name='Username';Expression='username'}, @{Name='Password';Expression='password'}, @{Name='Category';Expression='category'}, @{Name='Last Updated';Expression='updated_at'}
-    }
-    elseif ($LibraryAdmin) {
-        $PWSafeCreds = (Invoke-RestMethod -Uri "https://passwordsafe.corp.rackspace.com/projects/$PWSafePrjID/credentials?per_page=1000" -Headers $headers).credential | Where-Object {$_.description -match $CredName -and $_.description -match 'admin' -and $_.category -eq 'Library'} | Select-Object @{Name='Description';Expression='description'}, @{Name='Username';Expression='username'}, @{Name='Password';Expression='password'}, @{Name='Category';Expression='category'}, @{Name='Last Updated';Expression='updated_at'}
-    }
-    else {
-        $PWSafeCreds = (Invoke-RestMethod -Uri "https://passwordsafe.corp.rackspace.com/projects/$PWSafePrjID/credentials?per_page=1000" -Headers $headers).credential | Where-Object {$_.description -match $CredName} | Select-Object @{Name='Description';Expression='description'}, @{Name='Username';Expression='username'}, @{Name='Password';Expression='password'}, @{Name='Category';Expression='category'}, @{Name='Last Updated';Expression='updated_at'}
-    }
-    }
     end {
-    Write-Output $PWSafeCreds
+        Write-Output $PWSafeCreds
     }
     #$LibPass = ConvertTo-SecureString -AsPlainText -String ($MBU_creds | Where-Object { $_.category -match 'Library' -and $_.description -like '*' + $search + '*'  -and $_.username -match 'root'}).password
 }
