@@ -200,7 +200,6 @@ function Connect-mbuDevice {
         $RackPass = $LoginCreds."Rack Pass"
         }
     else {
-
         $DevUser = $env:USERNAME
     }
 
@@ -215,14 +214,14 @@ function Connect-mbuDevice {
         }
     }
     elseif ($DevOSType -like "*Linux"){
-
         Write-Output "`nConnecting to $mbuDevices ($UpCaseDevice) as user '$DevUser' via the $Gateway MBU gateway `r`n"
         Invoke-Command -Script { ssh -A gu=$env:USERNAME@$DevUser@$DevHostname@$mbuGW }
         #Write-Host "ssh -A gu=$env:USERNAME@$DevUser@$DevHostname@$mbuGW"
     }
     elseif ($Isilon) {
-        Invoke-Command -Script { ssh -A gu=$env:USERNAME@root@$Device@$mbuGW }
-        #Write-Output "ssh -A gu=$env:USERNAME@root@$Device.storage.rackspace.com@$mbuGW"
+        $IsilonRootPass = ConvertTo-SecureString -AsPlainText -String (Get-PWSafe $Device -LibraryRoot).Password
+        Set-Clipboard -Value (ConvertFrom-SecureString $IsilonRootPass -AsPlainText)
+        Invoke-Command -Script { ssh -A gu=$env:USERNAME@root@$Device.storage.rackspace.com@$mbuGW }
     }
     else {
         Write-Error -Message "Not device type in Core, unable to identify how to logon"
