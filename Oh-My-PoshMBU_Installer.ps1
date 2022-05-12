@@ -10,13 +10,13 @@ if ($SSHPrvExist) {
     Write-Output "Private Key file found"
 }2
 else {
-    Write-Output "No Private Key found. Copy your id_rsa to ~/.ssh/id_rsa"
+    Write-Output "No Private Key found. Copy your id_rsa. is copied to ~/.ssh/id_rsa"
 }
 if ($SSHPubExist) {
     Write-Output "Public Key found"
 }
 else {
-    Write-Output "No Public Key found. Copy your id_rsa.pub to ~/.ssh/id_rsa.pub"
+    Write-Output "No Public Key found. Copy your id_rsa is copied to ~/.ssh/id_rsa.pub"
 }
 
 ### Configure Powershell
@@ -25,6 +25,12 @@ Set-Service ssh-agent -StartupType Automatic #Might only work as admin
 Set-PSReadLineOption -PredictionSource History
 
 ### Install Modules
+# Terminal-Icons: https://github.com/devblackops/Terminal-Icons
+Install-Module -Name Terminal-Icons -Repository PSGallery -Force 
+
+# Oh My Posh: https://ohmyposh.dev/docs/windows
+Install-Module oh-my-posh -Scope CurrentUser
+
 # Rax
 # ModuleManager: https://rax.io/MMInstall
 [System.Net.ServicePointManager]::SecurityProtocol = @(
@@ -38,9 +44,4 @@ Install-RaxModule PoshCore
 Install-RaxModule RaxUtilities
 
 # PoshMBU
-New-Item -Path "$home\Documents\WindowsPowerShell\Modules\" -Name PoshMBU -ItemType Directory
-New-Item -Path "$home\Documents\PowerShell\Modules\" -Name PoshMBU -ItemType Directory
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/TruStorey/PoshMBU/master/PoshMBU.psm1?token=GHSAT0AAAAAABUADYQ4Q2DHZLA7HZJLZBSIYT3TPUA" -OutFile "$home\Documents\WindowsPowerShell\Modules\PoshMBU\PoshMBU.psm1"
-Copy-Item -Path "$home\Documents\WindowsPowerShell\Modules\PoshMBU\PoshMBU.psm1" -Destination "$home\Documents\PowerShell\Modules\PoshMBU\PoshMBU.psm1"
-
-Import-Module PoshMBU
+Install-Module PoshMBU
