@@ -249,7 +249,8 @@ function Get-RackerTools {
 
 function Start-AsLocalAdmin {
     param (
-        [Parameter(Position = 0)][string]$Command   
+        [Parameter(Position = 0)][string]$Command,
+        [Parameter()][switch]$Browse  
     )
 
     begin {
@@ -260,7 +261,18 @@ function Start-AsLocalAdmin {
     }
 
     process {
+        if ($Browse) {
+            #Browsing file
+            Add-Type -AssemblyName System.Windows.Forms
+            $FileBrowser = New-Object System.Windows.Forms.OpenFileDialog
+            $FileBrowser.filter = "Executable (*.exe)| *.exe"
+            [void]$FileBrowser.ShowDialog()
+            $BrowsedCommand = $FileBrowser.FileName
+            Start-Process "pwsh.exe" -Credential $localcreds -ArgumentList "-Command Start-Process '$BrowsedCommand'" -UseNewEnvironment
+        }
+        else {
         Start-Process "pwsh.exe" -Credential $localcreds -ArgumentList "-Command Start-Process '$Command'" -UseNewEnvironment
+        }
     }
 
     end {

@@ -12,7 +12,7 @@
 RootModule = 'PoshMBU.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.0.0.1'
+ModuleVersion = '1.0.1.1'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -69,7 +69,7 @@ PowerShellVersion = '5.1'
 # NestedModules = @()
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-FunctionsToExport = @('Get-mbuDevice', 'Connect-mbuDevice', 'Get-RackerTools', 'Get-PWSafe')
+FunctionsToExport = @('Get-mbuDevice', 'Connect-mbuDevice', 'Get-RackerTools', 'Start-AsLocalAdmin', 'Get-PWSafe')
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 CmdletsToExport = @()
