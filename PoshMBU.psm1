@@ -255,7 +255,13 @@ function Start-AsLocalAdmin {
 
     begin {
         #Set local credentials
-        $localpass = ConvertTo-SecureString -AsPlainText -String (Get-RackerAdminPassword).Password[0]
+        $localpwcount = (Get-RackerAdminPassword).Password.Count
+        if ($localpwcount -gt 1) {
+            $localpass = ConvertTo-SecureString -AsPlainText -String (Get-RackerAdminPassword).Password[0]
+        }
+        else {
+            $localpass = ConvertTo-SecureString -AsPlainText -String (Get-RackerAdminPassword).Password
+        }
         $localuser = "$env:COMPUTERNAME\rackadm2013"
         $localcreds = New-Object System.Management.Automation.PSCredential -ArgumentList $localuser, $localpass
     }
