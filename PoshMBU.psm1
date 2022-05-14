@@ -237,7 +237,7 @@ function Get-RackerTools {
     )
 
     if ($lonfiles){
-    New-PSDrive -Name 'lonfiles' -PSProvider FileSystem -Root '\\lonfiles.storage.rackspace.com\mbu_stuff' -Credential 'storage\daniel.storey'
+    New-PSDrive -Name 'lonfiles' -PSProvider FileSystem -Root '\\lonfiles.storage.rackspace.com\mbu_stuff' -Credential 'storage\$env:USERNAME'
     }  
     elseif ($LocalAdminPass) {
         Get-RackerAdminPassword
@@ -247,6 +247,27 @@ function Get-RackerTools {
     }
 }
 
+function Start-AsLocalAdmin {
+    param (
+        [Parameter(Position = 0)][string]$Command   
+    )
+
+    begin {
+        #Set local credentials
+        $localpass = ConvertTo-SecureString -AsPlainText -String (Get-RackerAdminPassword).Password[0]
+        $localuser = "$env:COMPUTERNAME\rackadm2013"
+        $localcreds = New-Object System.Management.Automation.PSCredential -ArgumentList $localuser, $localpass
+    }
+
+    process {
+        Start-Process "pwsh.exe" -Credential $localcreds -ArgumentList "-Command Start-Process '$Command'" -UseNewEnvironment
+    }
+
+    end {
+
+    }
+
+}
 function Get-PWSafe {
     param (
         [Parameter(Position = 0)]$CredName,
