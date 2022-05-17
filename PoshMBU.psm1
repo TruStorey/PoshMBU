@@ -5,8 +5,8 @@
  .Description
   Powershell cmdlets to interact with Core focused on MBU Engineering.
 
- .Parameter Hostname
-  This is a wild card search e.g. "CS0901", "CS0404DD", "CS0802DM02". NOTE: All hostnames are case sensitive. 
+ .Parameter Device
+  This is a wild card search e.g. "CS0901", "CS0404DD", "CS0802DM02". NOTE: Core hostnames are case sensitive, there is logic built in to attemtp lowercase and uppsercase versions of the name you specify. 
 
  .Example
    # Shows a list of all devices with CS0404 in the Hostname and their Core Status.
@@ -14,8 +14,8 @@
    g CS0404
 
  .Example
-   # Display a date range.
-   Show-Calendar -Start "March, 2010" -End "May, 2010"
+   # Connect to a Linux device using SSH
+   Connect-
 
 #>
 
@@ -76,9 +76,9 @@ function Get-mbuDevice {
         #[ValidateSet('DFW3' ,'ORD1' ,'IAD3' ,'IAD4' ,'LON3' ,'LON5' ,'LON6' ,'LON7' ,'FRA1' ,'FRA30' ,'HKG2' ,'HKG5' ,'SYD2' ,'SYD4' ,'SIN2' ,'SIN30' ,'SIN80' ,'NYC2' ,'SJC2' ,'MCI1' ,'SHA2',IgnoreCase=$true)][string]$DC, 
         [Parameter(ParameterSetName = 'ByStatus')][switch]$Inactive
     )
-
+    
     begin {
-        $mbuDevices = Convert-CoreDeviceNameToNumber -Device $Device -Account $Account
+        $mbuDevices = (Convert-CoreDeviceNameToNumber -Device $Device -Account $Account)
     }
 
     process {
@@ -93,10 +93,10 @@ function Get-mbuDevice {
         }
         elseif ($IPs) {
             $Results = Get-NetworkInformation -Device $mbuDevices | Select-Object Device,@{Name='Hostname';Expression='DeviceName'},@{Name='Public IP';Expression='PublicIp'},@{Name='ServiceNet IP';Expression='ServiceNetIp'},AggExZone
-            }
+        }
         elseif ($Virt) {
             $Results = Get-VmInformation -Device $mbuDevices | Select-Object Device,@{Name='Hostname';Expression='DeviceName'},DC,Networks,PowerState,Hypervisor,HypervisorClusterName,VCenter
-            }
+        }
         elseif ($vCenter) {
             Open-VCenter -Device $mbuDevices
         }
@@ -107,24 +107,24 @@ function Get-mbuDevice {
         }
         elseif ($OpenCore) {
             Show-CoreComputer -Computer $mbuDevices
-            }
+        }
         elseif ($TypeRackPass) {
             $RackPassword = (Find-CoreComputer -Computers @($mbuDevices) -Attributes Password).rack_password
-            }
             if ($RackPassword) {
                 $Typer = New-Object -ComObject wscript.shell;
                 Start-Sleep $TypeTimer
                 $Typer.SendKeys($RackPassword)
             }
+        }
         else { 
             $Results = Find-CoreComputer -Computers @($mbuDevices) | Where-Object {$_.status_name -match 'Online/Complete'} | Select-Object @{Name='Device';Expression='number'},@{Name='Hostname';Expression='name'},@{Name='DC';Expression='datacenter_symbol'},@{Name='Status';Expression='status_name'}
-            }
+        }
     }
+
     end {
         Write-Output $Results
     }
 }
-
 
 function Connect-mbuDevice {
     param (
@@ -133,14 +133,19 @@ function Connect-mbuDevice {
         [Parameter()][switch]$LoginAsRack,
         [Parameter()][switch]$Isilon,
         [Parameter()][int]$Account = 27928,
-        [Parameter()][switch]$TypeRackPass,
-        [Parameter()][int]$TypeTimer = 5,
-        #[Parameter(ParameterSetName = 'ByStatus')][ValidateSet('DFW3' ,'ORD1' ,'IAD3' ,'IAD4' ,'LON3' ,'LON5' ,'LON6' ,'LON7' ,'FRA1' ,'FRA30' ,'HKG2' ,'HKG5' ,'SYD2' ,'SYD4' ,'SIN2' ,'SIN30' ,'SIN80' ,'NYC2' ,'SJC2' ,'MCI1' ,'SHA2',IgnoreCase=$true)][string]$DC, 
         [Parameter(ParameterSetName = 'ByStatus')][switch]$Inactive
     )
+
     begin {
         $mbuDevices = Convert-CoreDeviceNameToNumber -Device $Device -Account $Account
-        #Gateway Logic
+
+        # Convert Device name to Upper case for pretty output
+        $UpCaseDevice = $Device.ToUpper()
+        $DeviceHostname = (Find-CoreComputer -Computers @($mbuDevices) | Select-Object name).name
+        $DevOSType = (Find-CoreComputer -Computers @($mbuDevices) -Attributes Os | Select-Object os_type).os_type
+        $DeviceUser = $env:USERNAME
+
+        # Gateway Logic
         if ($Gateway -eq 'LON5') {
             $mbuGW = 'mbu.lon5.gateway.rackspace.com'
         }
@@ -148,64 +153,40 @@ function Connect-mbuDevice {
             $mbuGW = 'mbu.ord1.gateway.rackspace.com'
         }
     }
-    process {
-        # Convert Device name to Upper case for pretty output
-        $UpCaseDevice = $Device.ToUpper()
-        $DevHostname = (Find-CoreComputer -Computers @($mbuDevices) | Select-Object name).name
-        $DevOSType = (Find-CoreComputer -Computers @($mbuDevices) -Attributes Os | Select-Object os_type).os_type
-        $DeviceUser = $env:USERNAME
 
+    process {
         if ($LoginAsRack) {
-            $LoginCreds = Get-mbuDevice $mbuDevices -ShowCreds
-            Write-Output $LoginCreds
             $DeviceUser = 'rack'
-            $RackPass = $LoginCreds."Rack Pass"
+            $RackPass = ConvertTo-SecureString -AsPlainText -Force (Get-mbuDevice $mbuDevices -ShowCreds)."Rack Pass"            
             }
         else {
-            $DevUser = $env:USERNAME
+            $DeviceUser = $env:USERNAME
         }
         if ($DevOSType -like "*Windows"){
             Write-Output "`nConnecting to $mbuDevices ($UpCaseDevice) using RoyalTS Application default settings`r`n"
             if ($LoginAsRack) {
-            Invoke-Command -ScriptBlock {& cmd /c "C:\Program Files (x86)\Royal TS V5\RoyalTS.exe" /protocol:rdp /using:uri /uri:$DevHostname /username:$DeviceUser /password:$RackPass}
+            Invoke-Command -ScriptBlock {& cmd /c "C:\Program Files (x86)\Royal TS V5\RoyalTS.exe" /protocol:rdp /using:uri /uri:$DeviceHostname /username:$DeviceUser /password:$RackPass}
             }
             else {
-            Invoke-Command -ScriptBlock {& cmd /c "C:\Program Files (x86)\Royal TS V5\RoyalTS.exe" /protocol:rdp /using:uri /uri:$DevHostname}
+            Invoke-Command -ScriptBlock {& cmd /c "C:\Program Files (x86)\Royal TS V5\RoyalTS.exe" /protocol:rdp /using:uri /uri:$DeviceHostname}
             }
         }
         elseif ($DevOSType -like "*Linux"){
             Write-Output "`nConnecting to $mbuDevices ($UpCaseDevice) as user '$DeviceUser' via the $Gateway MBU gateway `r`n"
-            Invoke-Command -Script { ssh -A gu=$env:USERNAME@$DeviceUser@$DevHostname@$mbuGW }
+            Invoke-Command -Script { ssh -A gu=$env:USERNAME@$DeviceUser@$DeviceHostname@$mbuGW }
         }
         elseif ($Isilon) {
             $IsilonRootPass = ConvertTo-SecureString -AsPlainText -String (Get-PWSafe $Device -LibraryRoot).Password
-            Set-Clipboard -Value (ConvertFrom-SecureString $IsilonRootPass -AsPlainText)
+            Set-Clipboard -Value (ConvertFrom-SecureString -AsPlainText $IsilonRootPass)
             Invoke-Command -Script { ssh -A gu=$env:USERNAME@root@$Device.storage.rackspace.com@$mbuGW }
         }
         else {
             Write-Error -Message "Not device type in Core, unable to identify how to logon"
         }
     }
+
     end {
         continue
-    }
-}
-
-function Get-RackerTools {
-    param (
-        [Parameter(Position = 0)]$Racker,
-        [Parameter()][switch]$lonfiles,
-        [Parameter()][switch]$LocalAdminPass
-    )
-
-    if ($lonfiles){
-    New-PSDrive -Name 'lonfiles' -PSProvider FileSystem -Root '\\lonfiles.storage.rackspace.com\mbu_stuff' -Credential 'storage\$env:USERNAME'
-    }  
-    elseif ($LocalAdminPass) {
-        Get-RackerAdminPassword
-    }
-    else {
-    Get-Racker -Name $Racker
     }
 }
 
@@ -244,9 +225,7 @@ function Start-AsLocalAdmin {
     }
 
     end {
-
     }
-
 }
 function Get-PWSafe {
     param (
@@ -272,7 +251,6 @@ function Get-PWSafe {
         
         if ($Maglibs) {
             $PWSafeCreds = (Invoke-RestMethod -Uri "https://passwordsafe.corp.rackspace.com/projects/$PWSafePrjID/credentials?per_page=1000" -Headers $headers).credential | Where-Object {$_.description -match $CredName -and $_.description -match 'maglib' -and $_.category -eq 'CommVault'} | Select-Object @{Name='Description';Expression='description'}, @{Name='Username';Expression='username'}, @{Name='Password';Expression='password'}, @{Name='Category';Expression='category'}, @{Name='Last Updated';Expression='updated_at'}
-
         }
         elseif ($LibraryRoot) {
             $PWSafeCreds = (Invoke-RestMethod -Uri "https://passwordsafe.corp.rackspace.com/projects/$PWSafePrjID/credentials?per_page=1000" -Headers $headers).credential | Where-Object {$_.description -match $CredName -and $_.description -match 'root' -and $_.category -eq 'Library'} | Select-Object @{Name='Description';Expression='description'}, @{Name='Username';Expression='username'}, @{Name='Password';Expression='password'}, @{Name='Category';Expression='category'}, @{Name='Last Updated';Expression='updated_at'}
@@ -318,3 +296,4 @@ Export-ModuleMember -Function * -Alias *
 # Get-NetworkSwitchPort $mbuDevices #Will prompt for password on first run
 # Get-VmDatastore $mbuDevices
 # Get-Backups (interact with MBU API to get info on DDB Backups etc)
+# Map drive to lonfiles
