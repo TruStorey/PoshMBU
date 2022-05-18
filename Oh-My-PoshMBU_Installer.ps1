@@ -1,5 +1,8 @@
+# How to start this
+#Invoke-WebRequest -uri https://raw.githubusercontent.com/TruStorey/PoshMBU/master/Oh-My-PoshMBU_Installer.ps1 -Outfile Oh-My-PoshMBU_Installer.ps1 ./Oh-My-PoshMBU_Installer.ps1
+
 # Set Execution Policy
-Write-Output "Setting Execution Policy"
+Write-Output "Setting Execution Policy..."
 Set-ExecutionPolicy Bypass -Scope CurrentUser -Force
 
 # Check for .ssh folder in home folder, if not create one.
@@ -54,6 +57,8 @@ else {
     Write-Output "No SSH keys found.`nEither copy existing ones from \\wsl$\Ubuntu-18.04\home\$env:USERNAME\.ssh\`n   or`n run ssh-keygen to create keys. You will need to upload your public key to the identify portal."
 }
 
+Write-Output "Installing RAX Modules..."
+
 # ModuleManager: https://rax.io/MMInstall
 [System.Net.ServicePointManager]::SecurityProtocol = @(
     [System.Net.SecurityProtocolType]::Tls;,
@@ -66,7 +71,7 @@ Install-RaxModule PoshCore
 Install-RaxModule RaxUtilities
 
 ### Configure Powershell OpenSSH
-Write-Output "Configuring OpenSSH"
+Write-Output "Configuring OpenSSH..."
 # Get local admin pass and run the following commands eleveated.
 $localadminpass = ConvertTo-SecureString -AsPlainText -String (Get-RackerAdminPassword).Password[0]
 $localadminuser = "$env:COMPUTERNAME\rackadm2013"
@@ -75,15 +80,28 @@ $localcreds = New-Object System.Management.Automation.PSCredential -ArgumentList
 Start-Process "pwsh.exe" -Credential $localcreds -ArgumentList "-Command Set-Service ssh-agent -StartupType Automatic" -UseNewEnvironment
 Start-Process "pwsh.exe" -Credential $localcreds -ArgumentList "-Command Start-Service ssh-agent" -UseNewEnvironment
 
+Write-Output "Installing Terminal Icons and oh-my-posh..."
+
 # Terminal-Icons: https://github.com/devblackops/Terminal-Icons
 Install-Module -Name Terminal-Icons -Repository PSGallery -Force
 
 # Install oh-my-posh
-Write-Output "Configuring oh-my-posh"
 Set-ExecutionPolicy Bypass -Scope Process -Force; Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://ohmyposh.dev/install.ps1'))
 
-# Install PoshMBU
+Write-Output "Installing PoshMBU"
 
+# Install PoshMBU
+$PoshMBUPath = "$env:USERPROFILE\Documents\"
+if ("$PoshMBUPath\PoshMBU") {
+    Write-Output "PoshMBU directory already exists."
+}
+else {
+    Invoke-WebRequest -uri https://raw.githubusercontent.com/TruStorey/PoshMBU/master/PoshMBU.psd1 -Outfile PoshMBU.psd1
+    Invoke-WebRequest -uri https://raw.githubusercontent.com/TruStorey/PoshMBU/master/PoshMBU.psm1 -Outfile PoshMBU.psm1
+}
+
+Install-Module $PoshMBUPath\PoshMBU.psd1
+Import-Module PoshMBU
 
 # Write to Profile
 Write-Output "Configuring Powershell Profile"
