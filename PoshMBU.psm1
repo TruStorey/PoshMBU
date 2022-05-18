@@ -62,9 +62,10 @@ function Convert-CoreDeviceNameToNumber {
 function Get-mbuDevice {
     param (
         [Parameter(Position = 0, Mandatory)]$Device,
-        [Parameter()][switch]$DRAC,
         [Parameter()][switch]$IPs,
-        [Parameter()][switch]$ShowCreds,
+        [Parameter()][switch]$SwitchPorts,
+        [Parameter()][switch]$DRAC,
+        [Parameter()][switch]$Credentials,
         [Parameter()][switch]$Virt,
         [Parameter()][switch]$vCenter,
         [Parameter()][switch]$vPortal,
@@ -85,14 +86,17 @@ function Get-mbuDevice {
         if ($Inactive) { 
             $Results = Find-CoreComputer -Computers @($mbuDevices) | Select-Object @{Name='Device';Expression='number'},@{Name='Hostname';Expression='name'},@{Name='DC';Expression='datacenter_symbol'},@{Name='Status';Expression='status_name'}
             } 
+        elseif ($IPs) {
+            $Results = Get-NetworkInformation -Device $mbuDevices | Select-Object Device,@{Name='Hostname';Expression='DeviceName'},@{Name='Public IP';Expression='PublicIp'},@{Name='ServiceNet IP';Expression='ServiceNetIp'},AggExZone
+        }
+        elseif ($SwitchPorts) {
+            $Results = Get-NetworkSwitchPort -Device $mbuDevices | Select-Object Device, Type, Switch, Port, Link, Vlan, Mode, MacAddresses, Speed, Duplex, Uptime
+        }
         elseif ($DRAC) {
             $Results = Find-CoreComputer -Computers @($mbuDevices) -Attributes Drac | Select-Object @{Name='Device';Expression='number'},@{Name='Hostname';Expression='name'},@{Name='DC';Expression='datacenter_symbol'},@{Name='DRAC IP';Expression='drac_ips'},@{Name='DRAC User';Expression='drac_usernames'},@{Name='DRAC Password';Expression='drac_passwords'}
         }       
-        elseif ($ShowCreds) {
+        elseif ($Credentials) {
             $Results = Find-CoreComputer -Computers @($mbuDevices) -Attributes Password | Select-Object @{Name='Device';Expression='number'},@{Name='Hostname';Expression='name'},@{Name='Rack Pass';Expression='rack_password'},@{Name='Admin Pass';Expression='admin_password'}
-        }
-        elseif ($IPs) {
-            $Results = Get-NetworkInformation -Device $mbuDevices | Select-Object Device,@{Name='Hostname';Expression='DeviceName'},@{Name='Public IP';Expression='PublicIp'},@{Name='ServiceNet IP';Expression='ServiceNetIp'},AggExZone
         }
         elseif ($Virt) {
             $Results = Get-VmInformation -Device $mbuDevices | Select-Object Device,@{Name='Hostname';Expression='DeviceName'},DC,Networks,PowerState,Hypervisor,HypervisorClusterName,VCenter
@@ -284,6 +288,7 @@ $cvwatch.items | Select-Object -Property commcellName, libraryAlias, runningJobs
 New-Alias -Name g -Value Get-mbuDevice
 New-Alias -Name c -Value Connect-mbuDevice
 New-Alias -Name pw -Value Get-PWSafe
+New-Alias -Name sala -Value Start-AsLocalAdmin
 
 # Export
 Export-ModuleMember -Function * -Alias *
