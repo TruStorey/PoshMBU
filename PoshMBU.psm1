@@ -237,7 +237,7 @@ function Get-PWSafe {
         [Parameter()][switch]$Maglibs,
         [Parameter()][switch]$LibraryRoot,
         [Parameter()][switch]$LibraryAdmin,
-        [Parameter(ParameterSetName = 'ByProject')][ValidateSet('MBU Engineering', 'MBU Engineering - Cohesity',IgnoreCase=$true)][string]$Project = 'MBU Engineering'        
+        [Parameter(ParameterSetName = 'ByProject')][ValidateSet('MBU Engineering', 'MBU Engineering - RSDP',IgnoreCase=$true)][string]$Project = 'MBU Engineering'        
     )
 
     begin {
@@ -302,3 +302,7 @@ Export-ModuleMember -Function * -Alias *
 # Get-VmDatastore $mbuDevices
 # Get-Backups (interact with MBU API to get info on DDB Backups etc)
 # Map drive to lonfiles
+
+# SCP functions would be good.
+
+# Add -QC Swtich to PWSafe
