@@ -1,4 +1,7 @@
-# How to start this
+# How does this work? 
+# Download Windows Terminal
+# Download Powershell 7
+
 #Invoke-WebRequest -uri https://raw.githubusercontent.com/TruStorey/PoshMBU/master/Oh-My-PoshMBU_Installer.ps1 -Outfile Oh-My-PoshMBU_Installer.ps1 ./Oh-My-PoshMBU_Installer.ps1
 
 # Set Execution Policy
@@ -71,6 +74,8 @@ Install-RaxModule PoshCore
 Install-RaxModule RaxUtilities
 
 ### Configure Powershell OpenSSH
+
+
 Write-Output "Configuring OpenSSH..."
 # Get local admin pass and run the following commands eleveated.
 $localadminpass = ConvertTo-SecureString -AsPlainText -String (Get-RackerAdminPassword).Password[0]
