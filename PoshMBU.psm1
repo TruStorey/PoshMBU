@@ -237,6 +237,7 @@ function Get-PWSafe {
         [Parameter()][switch]$Maglibs,
         [Parameter()][switch]$LibraryRoot,
         [Parameter()][switch]$LibraryAdmin,
+        [Parameter()][switch]$QC,
         [Parameter(ParameterSetName = 'ByProject')][ValidateSet('MBU Engineering', 'MBU Engineering - RSDP',IgnoreCase=$true)][string]$Project = 'MBU Engineering'        
     )
 
@@ -261,6 +262,9 @@ function Get-PWSafe {
         }
         elseif ($LibraryAdmin) {
             $PWSafeCreds = (Invoke-RestMethod -Uri "https://passwordsafe.corp.rackspace.com/projects/$PWSafePrjID/credentials?per_page=1000" -Headers $headers).credential | Where-Object {$_.description -match $CredName -and $_.description -match 'admin' -and $_.category -eq 'Library'} | Select-Object @{Name='Description';Expression='description'}, @{Name='Username';Expression='username'}, @{Name='Password';Expression='password'}, @{Name='Category';Expression='category'}, @{Name='Last Updated';Expression='updated_at'}
+        }
+        elseif ($QC) {
+            $PWSafeCreds = (Invoke-RestMethod -Uri "https://passwordsafe.corp.rackspace.com/projects/$PWSafePrjID/credentials?per_page=1000" -Headers $headers).credential | Where-Object {$_.description -match $CredName -and $_.category -eq 'Library'} | Select-Object @{Name='Description';Expression='description'}, @{Name='Username';Expression='username'}, @{Name='Category';Expression='category'}, @{Name='Last Updated';Expression='updated_at'}
         }
         else {
             $PWSafeCreds = (Invoke-RestMethod -Uri "https://passwordsafe.corp.rackspace.com/projects/$PWSafePrjID/credentials?per_page=1000" -Headers $headers).credential | Where-Object {$_.description -match $CredName} | Select-Object @{Name='Description';Expression='description'}, @{Name='Username';Expression='username'}, @{Name='Password';Expression='password'}, @{Name='Category';Expression='category'}, @{Name='Last Updated';Expression='updated_at'}
