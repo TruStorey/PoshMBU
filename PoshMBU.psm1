@@ -19,7 +19,8 @@
 
 #>
 
-#Requires -Modules ModuleManager, PoshCore, RaxUtilities
+#Requires -Modules ModuleManager, PoshCore 
+#RaxUtilities - doesnt seem to link this right now.
 
 # Used to convert provided hostname to device number
 # Need to add logic to search for both as sometimes both are returned!
@@ -275,6 +276,12 @@ function Get-PWSafe {
         Write-Output $PWSafeCreds
     }
     #$LibPass = ConvertTo-SecureString -AsPlainText -String ($MBU_creds | Where-Object { $_.category -match 'Library' -and $_.description -like '*' + $search + '*'  -and $_.username -match 'root'}).password
+}
+
+function cli.sb {
+
+    Invoke-Command -Script { ssh -A gu=$env:USERNAME@$env:USERNAME@10.17.141.18@mbu.lon5.gateway.rackspace.com }
+
 }
 
 <# 
