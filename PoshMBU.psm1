@@ -63,6 +63,7 @@ function Convert-CoreDeviceNameToNumber {
 function Get-mbuDevice {
     param (
         [Parameter(Position = 0, Mandatory)]$Device,
+        [Parameter()][switch]$HWInfo,
         [Parameter()][switch]$IPs,
         [Parameter()][switch]$SwitchPorts,
         [Parameter()][switch]$DRAC,
@@ -85,10 +86,13 @@ function Get-mbuDevice {
 
     process {
         if ($Inactive) { 
-            $Results = Find-CoreComputer -Computers @($mbuDevices) | Select-Object @{Name='Device';Expression='number'},@{Name='Hostname';Expression='name'},@{Name='DC';Expression='datacenter_symbol'},@{Name='Status';Expression='status_name'}
+            $Results = Find-CoreComputer -Computers @($mbuDevices) | Select-Object @{Name='Device';Expression='number'},@{Name='Hostname';Expression='name'},@{Name='DC';Expression='datacenter_symbol'}
             } 
         elseif ($IPs) {
             $Results = Get-NetworkInformation -Device $mbuDevices | Select-Object Device,@{Name='Hostname';Expression='DeviceName'},@{Name='Public IP';Expression='PublicIp'},@{Name='ServiceNet IP';Expression='ServiceNetIp'},AggExZone
+        }
+        elseif ($HWInfo) {
+            $Results = Find-CoreComputer -Computers @($mbuDevices) -Attributes Os | Select-Object @{Name='Device';Expression='number'},@{Name='Hostname';Expression='name'},@{Name='DC';Expression='datacenter_symbol'},@{Name='Status';Expression='status_name'},@{Name='Server Type';Expression='platform_name'}
         }
         elseif ($SwitchPorts) {
             $Results = Get-NetworkSwitchPort -Device $mbuDevices | Select-Object Device, Type, Switch, Port, Link, Vlan, Mode, MacAddresses, Speed, Duplex, Uptime
