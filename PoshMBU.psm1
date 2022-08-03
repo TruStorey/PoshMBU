@@ -166,7 +166,7 @@ function Connect-mbuDevice {
     process {
         if ($LoginAsRack) {
             $DeviceUser = 'rack'
-            $RackPass = ConvertTo-SecureString -AsPlainText -Force (Get-mbuDevice $mbuDevices -ShowCreds)."Rack Pass"            
+            $RackPass = ConvertTo-SecureString -AsPlainText -Force (Get-mbuDevice $mbuDevices -Credentials)."Rack Pass"            
             }
         else {
             $DeviceUser = $env:USERNAME
