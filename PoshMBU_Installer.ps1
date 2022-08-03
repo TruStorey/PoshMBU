@@ -12,5 +12,6 @@ $PoshMBUPath = "$p\PoshMBU"
 Invoke-WebRequest -uri https://raw.githubusercontent.com/TruStorey/PoshMBU/master/PoshMBU.psd1 -Outfile $PoshMBUPath\PoshMBU.psd1
 Invoke-WebRequest -uri https://raw.githubusercontent.com/TruStorey/PoshMBU/master/PoshMBU.psm1 -Outfile $PoshMBUPath\PoshMBU.psm1
 
-Install-Module $PoshMBUPath\PoshMBU.psd1
+# Import Module
 Import-Module PoshMBU
+
